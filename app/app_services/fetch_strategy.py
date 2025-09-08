@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
-from schemas import ProductInDB, Supplier, WebResponseType
+
+from app.SERVICE.schemas import ProductInDB, Supplier, WebResponseType
 
 
 def parse_product_item(item: dict, supplier: Supplier) -> ProductInDB | None:

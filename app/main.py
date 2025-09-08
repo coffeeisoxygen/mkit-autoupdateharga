@@ -5,21 +5,26 @@ from favorites_view import favorites_view
 
 
 def main(page: ft.Page):
-    page.title = "NavigationRail Example"
-    selected_index = 0
+    page.title = "NavigationRail Routing Example"
 
-    def get_content(idx):
-        if idx == 0:
+    routes = ["/explore", "/commute", "/favorites"]
+
+    def get_content(route):
+        if route == "/explore":
             return explore_view()
-        elif idx == 1:
+        elif route == "/commute":
             return commute_view()
-        elif idx == 2:
+        elif route == "/favorites":
             return favorites_view()
         else:
             return explore_view()
 
     def nav_change(e):
-        idx = e.control.selected_index
+        page.go(routes[e.control.selected_index])
+
+    def route_change(e):
+        route = page.route if page.route in routes else "/explore"
+        idx = routes.index(route)
         page.clean()
         page.add(
             ft.Row(
@@ -42,7 +47,7 @@ def main(page: ft.Page):
                         on_change=nav_change,
                     ),
                     ft.Container(
-                        get_content(idx),
+                        get_content(route),
                         expand=True,
                         padding=20,
                     ),
@@ -51,12 +56,8 @@ def main(page: ft.Page):
             )
         )
 
-    # Initial render
-    class DummyEvent:
-        def __init__(self, idx):
-            self.control = type("obj", (object,), {"selected_index": idx})
-
-    nav_change(DummyEvent(selected_index))
+    page.on_route_change = route_change
+    page.go(page.route or "/explore")
 
 
 ft.app(target=main)

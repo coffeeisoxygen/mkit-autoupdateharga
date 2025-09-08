@@ -7,9 +7,10 @@ import asyncio
 import json
 from pathlib import Path
 
-from fetch_strategy import FetchContext, WebResponseType
 from loguru import logger
-from schemas import Supplier
+
+from app.SERVICE.fetch_strategy import FetchContext, WebResponseType
+from app.SERVICE.schemas import Supplier
 
 
 # --- Supplier Samples --------------------------------------------------------
