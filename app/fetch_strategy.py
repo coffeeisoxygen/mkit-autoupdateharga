@@ -6,6 +6,24 @@ from loguru import logger
 from schemas import ProductInDB, Supplier, WebResponseType
 
 
+def parse_product_item(item: dict, supplier: Supplier) -> ProductInDB | None:
+    if supplier.mapping is None:
+        return None
+    try:
+        status = supplier.normalize_status(
+            item.get(supplier.mapping.get("status", ""), "")
+        )
+        return ProductInDB(
+            kode=item.get(supplier.mapping.get("kode", ""), ""),
+            deskripsi=item.get(supplier.mapping.get("deskripsi", ""), ""),
+            harga=int(float(item.get(supplier.mapping.get("harga", ""), 0))),
+            status=status,
+        )
+    except Exception as e:
+        logger.warning(f"[{supplier.name}] gagal parse item: {e}")
+        return None
+
+
 class FetchStrategy(ABC):
     @abstractmethod
     async def fetch(self, supplier: Supplier) -> list[ProductInDB]:
@@ -32,27 +50,17 @@ class JsonFetchStrategy(FetchStrategy):
         products: list[ProductInDB] = []
 
         for item in items:
-            try:
-                status = supplier.normalize_status(
-                    item.get(supplier.mapping["status"], "")
-                )
-                products.append(
-                    ProductInDB(
-                        kode=item.get(supplier.mapping["kode"], ""),
-                        deskripsi=item.get(supplier.mapping["deskripsi"], ""),
-                        harga=int(float(item.get(supplier.mapping["harga"], 0))),
-                        status=status,
-                    )
-                )
-            except Exception as e:
-                logger.warning(f"[{supplier.name}] gagal parse item JSON: {e}")
-                continue
-
+            product = parse_product_item(item, supplier)
+            if product:
+                products.append(product)
         return products
 
 
 class HtmlFetchStrategy(FetchStrategy):
     async def fetch(self, supplier: Supplier) -> list[ProductInDB]:
+        if supplier.mapping is None:
+            logger.warning(f"[{supplier.name}] mapping kosong, skip.")
+            return []
         async with httpx.AsyncClient(timeout=15) as client:
             try:
                 resp = await client.get(str(supplier.url_harga))
@@ -67,33 +75,33 @@ class HtmlFetchStrategy(FetchStrategy):
         for row in soup.select("table.tabel tr"):
             cols = row.find_all("td")
             if len(cols) == 4 and cols[0].get_text(strip=True).lower() != "kode":
+                item = {
+                    supplier.mapping.get("kode", "kode"): cols[0].get_text(strip=True),
+                    supplier.mapping.get("deskripsi", "deskripsi"): cols[1].get_text(
+                        strip=True
+                    ),
+                    supplier.mapping.get("harga", "harga"): cols[2]
+                    .get_text(strip=True)
+                    .replace(".", "")
+                    .replace(",", ""),
+                    supplier.mapping.get("status", "status"): cols[3].get_text(
+                        strip=True
+                    ),
+                }
+                # harga conversion
                 try:
-                    kode = cols[0].get_text(strip=True)
-                    deskripsi = cols[1].get_text(strip=True)
-                    harga = (
-                        cols[2].get_text(strip=True).replace(".", "").replace(",", "")
-                    )
-                    status_raw = cols[3].get_text(strip=True)
-
+                    harga_val = item[supplier.mapping.get("harga", "harga")]
                     harga_int = (
-                        int(float(harga))
-                        if harga.isdigit() or harga.replace(".", "").isdigit()
+                        int(float(harga_val))
+                        if harga_val.isdigit() or harga_val.replace(".", "").isdigit()
                         else 0
                     )
-                    status = supplier.normalize_status(status_raw)
-
-                    products.append(
-                        ProductInDB(
-                            kode=kode,
-                            deskripsi=deskripsi,
-                            harga=harga_int,
-                            status=status,
-                        )
-                    )
-                except Exception as e:
-                    logger.warning(f"[{supplier.name}] gagal parse row HTML: {e}")
-                    continue
-
+                    item[supplier.mapping.get("harga", "harga")] = str(harga_int)
+                except Exception:
+                    item[supplier.mapping.get("harga", "harga")] = "0"
+                product = parse_product_item(item, supplier)
+                if product:
+                    products.append(product)
         return products
 
 
