@@ -64,7 +64,7 @@ async def fetch_and_save(supplier: Supplier, save_dir: Path) -> None:
     # Save ke file JSON
     save_path = save_dir / f"{supplier.name.replace(' ', '_').lower()}.json"
     with open(save_path, "w", encoding="utf-8") as f:
-        json.dump([p.dict() for p in products], f, ensure_ascii=False, indent=2)
+        json.dump([p.model_dump() for p in products], f, ensure_ascii=False, indent=2)
 
     logger.success(f"[{supplier.name}] data berhasil disimpan ke {save_path}")
 
