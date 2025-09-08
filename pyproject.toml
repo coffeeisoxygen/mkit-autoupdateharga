@@ -5,10 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aioodbc>=0.5.0",
+    "aiosqlite>=0.21.0",
     "apscheduler>=3.11.0",
     "beautifulsoup4>=4.13.5",
+    "cryptography>=45.0.7",
     "flet[all]>=0.28.3",
     "loguru>=0.7.3",
+    "pydantic-settings>=2.10.1",
     "pyodbc>=5.2.0",
     "requests>=2.32.5",
     "sqlalchemy>=2.0.43",
