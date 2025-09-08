@@ -57,13 +57,13 @@ class Encryptor:
         return decrypted.decode()
 
 
-# Example usage:
-if __name__ == "__main__":
-    builder = Encryptor()
-    original = "Server=myserver;Database=mydb;UID=myuser;PWD=mypassword;"
-    encrypted = builder.encrypt(original)
-    decrypted = builder.decrypt(encrypted)
+# # Example usage:
+# if __name__ == "__main__":
+#     builder = Encryptor()
+#     original = "Server=myserver;Database=mydb;UID=myuser;PWD=mypassword;"
+#     encrypted = builder.encrypt(original)
+#     decrypted = builder.decrypt(encrypted)
 
-    print(f"Original:  {original}")
-    print(f"Encrypted: {encrypted}")
-    print(f"Decrypted: {decrypted}")
+#     print(f"Original:  {original}")
+#     print(f"Encrypted: {encrypted}")
+#     print(f"Decrypted: {decrypted}")
