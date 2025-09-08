@@ -1,18 +1,54 @@
-"""using flet UI to Build connection string for SQL Server."""
-
 import flet as ft
+import pyodbc
+
+# --- Global Auth Modes ---
+AUTH_MODES = [
+    "SQL Server Authentication",
+    "Windows Authentication",
+]
+
+
+# --- Reusable DriverDropdown component ---
+def get_driver_options():
+    drivers = [ft.dropdown.Option(driver, driver) for driver in pyodbc.drivers()]
+    return drivers
+
+
+class DriverDropdown(ft.Row):
+    def __init__(self, width=350):
+        super().__init__()
+        self.dropdown = ft.Dropdown(
+            label="ODBC Driver",
+            options=get_driver_options(),
+            width=width,
+        )
+        self.btn_refresh = ft.ElevatedButton(
+            text="Refresh Driver List", on_click=self.refresh_driver_list
+        )
+        self.controls = [self.dropdown, self.btn_refresh]
+
+    def refresh_driver_list(self, e=None):
+        self.dropdown.options = get_driver_options()
+        self.dropdown.update()
+
+    @property
+    def value(self):
+        return self.dropdown.value
+
+    @value.setter
+    def value(self, v):
+        self.dropdown.value = v
+        self.dropdown.update()
 
 
 class ConStringBuilderForm(ft.Column):
     def __init__(self):
         super().__init__()
+        self.driver_dropdown = DriverDropdown()
         self.drd_auth_mode = ft.Dropdown(
-            options=[
-                ft.dropdown.Option("SQL Server Authentication"),
-                ft.dropdown.Option("Windows Authentication"),
-            ],
+            options=[ft.dropdown.Option(mode) for mode in AUTH_MODES],
             label="Authentication Mode",
-            value="SQL Server Authentication",
+            value=AUTH_MODES[0],
             width=300,
         )
         self.txt_servername = ft.TextField(label="Server Name", width=300)
@@ -41,6 +77,7 @@ class ConStringBuilderForm(ft.Column):
         self.btn_cancel = ft.ElevatedButton(text="Cancel")
 
         self.controls = [
+            self.driver_dropdown,
             self.drd_auth_mode,
             self.txt_servername,
             self.txt_database,
@@ -55,11 +92,13 @@ class ConStringBuilderForm(ft.Column):
 
     def build_constring(self, e=None):
         parts = []
+        if self.driver_dropdown.value:
+            parts.append(f"DRIVER={{{self.driver_dropdown.value}}}")
         if self.txt_servername.value:
             parts.append(f"Server={self.txt_servername.value}")
         if self.txt_database.value:
             parts.append(f"Database={self.txt_database.value}")
-        if self.drd_auth_mode.value == "Windows Authentication":
+        if self.drd_auth_mode.value == AUTH_MODES[1]:
             parts.append("Trusted_Connection=yes")
         else:
             if self.txt_uid.value:
@@ -75,7 +114,7 @@ class ConStringBuilderForm(ft.Column):
         self.update()
 
     def on_auth_mode_change(self, e=None):
-        if self.drd_auth_mode.value == "Windows Authentication":
+        if self.drd_auth_mode.value == AUTH_MODES[1]:
             self.txt_uid.value = ""
             self.txt_pwd.value = ""
             self.txt_uid.disabled = True
@@ -89,12 +128,13 @@ class ConStringBuilderForm(ft.Column):
 
     def on_save(self, e=None):
         # Copy connection string to clipboard
-        self.page.set_clipboard(
-            self.txt_constring.value if self.txt_constring.value is not None else ""
-        )
+        if hasattr(self, "page") and self.page:
+            self.page.set_clipboard(
+                self.txt_constring.value if self.txt_constring.value is not None else ""
+            )
 
     def on_cancel(self, e=None):
-        self.drd_auth_mode.value = "SQL Server Authentication"
+        self.drd_auth_mode.value = AUTH_MODES[0]
         self.txt_servername.value = ""
         self.txt_database.value = ""
         self.txt_uid.value = ""
